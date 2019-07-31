@@ -113,6 +113,8 @@ private:
 	void imageCallback(const sensor_msgs::ImageConstPtr& msg, const sensor_msgs::CameraInfoConstPtr &cinfo)
 	{
 		Mat image = cv_bridge::toCvShare(msg, "bgr8")->image;
+		Mat image_inv;
+		bitwise_not(image, image_inv);
 
 		vector<int> ids;
 		vector<vector<cv::Point2f>> corners, rejected;
@@ -126,6 +128,10 @@ private:
 		array_.header.stamp = msg->header.stamp;
 		array_.header.frame_id = msg->header.frame_id;
 		array_.markers.clear();
+
+		if (ids.size() == 0) {
+			cv::aruco::detectMarkers(image_inv, dictionary_, corners, ids, parameters_, rejected);
+		}
 
 		if (ids.size() != 0) {
 			parseCameraInfo(cinfo, camera_matrix_, dist_coeffs_);
@@ -185,13 +191,9 @@ private:
 					// TODO: check IDs are unique
 					if (send_tf_) {
 						transform.child_frame_id = getChildFrameId(ids[i]);
-
-						// check if such static transform exists
-						if (!tf_buffer_.canTransform(transform.header.frame_id, transform.child_frame_id, transform.header.stamp)) {
-							transform.transform.rotation = marker.pose.orientation;
-							fillTranslation(transform.transform.translation, tvecs[i]);
-							br_.sendTransform(transform);
-						}
+						transform.transform.rotation = marker.pose.orientation;
+						fillTranslation(transform.transform.translation, tvecs[i]);
+						br_.sendTransform(transform);
 					}
 				}
 				array_.markers.push_back(marker);
