@@ -191,6 +191,12 @@ private:
 					// TODO: check IDs are unique
 					if (send_tf_) {
 						transform.child_frame_id = getChildFrameId(ids[i]);
+						// check if such static transform exists
+						if (!tf_buffer_.canTransform(transform.header.frame_id, transform.child_frame_id, transform.header.stamp)) {
+							transform.transform.rotation = marker.pose.orientation;
+							fillTranslation(transform.transform.translation, tvecs[i]);
+							br_.sendTransform(transform);
+						}
 						transform.transform.rotation = marker.pose.orientation;
 						fillTranslation(transform.transform.translation, tvecs[i]);
 						br_.sendTransform(transform);
